@@ -67,16 +67,15 @@ class UnboundCheck(AgentCheck):
 
             if 'histogram' in metric_name:  # dont send histogram metrics
                 self.log.debug('unbound.%s:%s', unbound_metric_name, stat[1])
+            elif any(count in metric_name for count in ['num.', 'unwanted', '.count']):
+                self.log.debug('count: %s', stat)
+                self.count(unbound_metric_name, stat[1], tags=all_tags)
+            elif 'time.' in metric_name:
+                self.log.debug('gauge (time): %s', stat)
+                self.gauge(unbound_metric_name, float(stat[1]), tags=all_tags)
             else:
-                if any(count in metric_name for count in ['num.', 'unwanted', '.count']):
-                    self.log.debug('count: %s', stat)
-                    self.count(unbound_metric_name, stat[1], tags=all_tags)
-                elif 'time.' in metric_name:
-                    self.log.debug('gauge (time): %s', stat)
-                    self.gauge(unbound_metric_name, float(stat[1]), tags=all_tags)
-                else:
-                    self.log.debug('gauge: %s', stat)
-                    self.gauge(unbound_metric_name, float(stat[1]), tags=all_tags)
+                self.log.debug('gauge: %s', stat)
+                self.gauge(unbound_metric_name, float(stat[1]), tags=all_tags)
 
     def call_unbound_control(self, command, tags):
         try:
@@ -115,7 +114,12 @@ class UnboundCheck(AgentCheck):
             'num.answer.rcode': self.answer_rcode_handler,
         }
 
-        handlers = [TAG_HANDLERS[prefix] for prefix in TAG_HANDLERS.keys() if metric_name.startswith(prefix)]
+        handlers = [
+            TAG_HANDLERS[prefix]
+            for prefix in TAG_HANDLERS
+            if metric_name.startswith(prefix)
+        ]
+
         num_handlers = len(handlers)
         if num_handlers == 0:
             return None

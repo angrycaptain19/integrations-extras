@@ -98,13 +98,14 @@ class RiakReplCheck(AgentCheck):
 
         for c in connected_clusters:
 
-            if stats['fullsync_enabled'] is not None:
-                if self.exists(stats['fullsync_coordinator'], [c]):
-                    for key, val in iteritems(stats['fullsync_coordinator'][c]):
-                        if key in self.FULLSYNC_COORDINATOR:
-                            self.safe_submit_metric(
-                                "riak_repl.fullsync_coordinator." + key, val, tags=tags + ['cluster:%s' % c]
-                            )
+            if stats['fullsync_enabled'] is not None and self.exists(
+                stats['fullsync_coordinator'], [c]
+            ):
+                for key, val in iteritems(stats['fullsync_coordinator'][c]):
+                    if key in self.FULLSYNC_COORDINATOR:
+                        self.safe_submit_metric(
+                            "riak_repl.fullsync_coordinator." + key, val, tags=tags + ['cluster:%s' % c]
+                        )
 
             if stats['realtime_started'] is not None:
                 if self.exists(stats['sources'], ['source_stats', 'rt_source_connected_to']):

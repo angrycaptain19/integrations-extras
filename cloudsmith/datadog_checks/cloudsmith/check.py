@@ -41,8 +41,7 @@ class CloudsmithCheck(AgentCheck):
             raise ConfigurationError('Configuration error, please specify Cloudsmith url in conf.yaml')
 
     def get_full_path(self, path):
-        url = self.base_url.rstrip('/') + path + self.org
-        return url
+        return self.base_url.rstrip('/') + path + self.org
 
     # Get stats from REST API as json
     def get_api_json(self, url):
@@ -103,13 +102,11 @@ class CloudsmithCheck(AgentCheck):
 
     def get_usage_info(self):
         url = self.get_full_path(QUOTA)
-        response_json = self.get_api_json(url)
-        return response_json
+        return self.get_api_json(url)
 
     def get_entitlement_info(self):
         url = self.get_full_path(METRIC)
-        response_json = self.get_api_json(url)
-        return response_json
+        return self.get_api_json(url)
 
     def get_parsed_entitlement_info(self):
         token_count = -1
@@ -142,12 +139,11 @@ class CloudsmithCheck(AgentCheck):
         else:
             self.log.warning("Error when parsing JSON for tokens")
 
-        entitlement_info = {
+        return {
             'token_count': token_count,
             'token_bandwidth_total': bandwidth_total,
             'token_download_total': download_total,
         }
-        return entitlement_info
 
     def get_parsed_usage_info(self):
         response_json = self.get_usage_info()
@@ -189,13 +185,12 @@ class CloudsmithCheck(AgentCheck):
             elif bandwidth_used >= WARNING_QUOTA:
                 bandwidth_mark = self.WARNING
 
-        usage_info = {
+        return {
             'storage_mark': storage_mark,
             'storage_used': storage_used,
             'bandwidth_mark': bandwidth_mark,
             'bandwidth_used': bandwidth_used,
         }
-        return usage_info
 
     def check(self, _):
 

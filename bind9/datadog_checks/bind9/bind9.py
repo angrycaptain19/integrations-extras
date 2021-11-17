@@ -37,8 +37,7 @@ class Bind9Check(AgentCheck):
             self.service_check(self.BIND_SERVICE_CHECK, AgentCheck.CRITICAL, message="stats cannot be taken")
             raise
 
-        root = ET.fromstring(response.text)
-        return root
+        return ET.fromstring(response.text)
 
     def DateTimeToEpoch(self, DateTime):
         # Ignore time zone

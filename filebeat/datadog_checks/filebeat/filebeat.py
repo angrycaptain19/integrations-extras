@@ -226,9 +226,11 @@ class FilebeatCheck(AgentCheck):
         if self.instance:
             self.tags = self.instance.get('tags', [])
             # preserve backwards compatible default timeouts
-            if self.instance.get('timeout') is None:
-                if self.init_config.get('timeout') is None:
-                    self.instance['timeout'] = 2
+            if (
+                self.instance.get('timeout') is None
+                and self.init_config.get('timeout') is None
+            ):
+                self.instance['timeout'] = 2
 
     def check(self, instance):
         normalize_metrics = is_affirmative(instance.get("normalize_metrics", False))

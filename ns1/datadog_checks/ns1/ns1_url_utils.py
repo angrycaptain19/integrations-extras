@@ -206,10 +206,10 @@ class Ns1Url:
 
         if not val:
             return urlList
+        metric_record = "ttl"
+        metric_type = "gauge"
         for accDict in val:
             for _, domainList in accDict.items():
-                metric_record = "ttl"
-                metric_type = "gauge"
                 if domainList:
                     for domain in domainList:
                         tags = ["record:{zone}".format(zone=domain)]
@@ -237,17 +237,20 @@ class Ns1Url:
     def get_pulsar_by_record_url(self, val, query_params):
         urlList = {}
         query_string = "?period=1h&"
-        if query_params:
-            if "pulsar_geo" in query_params and query_params["pulsar_geo"] != "*":
-                query_string = query_string + "geo=" + query_params["pulsar_geo"] + "&"
-                if "pulsar_asn" in query_params and query_params["pulsar_asn"] != "*":
-                    query_string = query_string + "asn=" + query_params["pulsar_asn"] + "&"
+        if (
+            query_params
+            and "pulsar_geo" in query_params
+            and query_params["pulsar_geo"] != "*"
+        ):
+            query_string = query_string + "geo=" + query_params["pulsar_geo"] + "&"
+            if "pulsar_asn" in query_params and query_params["pulsar_asn"] != "*":
+                query_string = query_string + "asn=" + query_params["pulsar_asn"] + "&"
         query_string = query_string[:-1]
 
+        metric_type = "count"
         for record in val:
             for domain, rectype in record.items():
                 tags = ["record:{record}".format(record=domain)]
-                metric_type = "count"
                 metric_record = "pulsar.decisions.record"
                 # pulsar decisions for record
                 url = NS1_ENDPOINTS["pulsar.decisions.record"].format(
@@ -319,12 +322,15 @@ class Ns1Url:
         query_string = "?"
         # for "pulsar" group of endpoints, override settings and always use period = 1h
         # to get properly sumarized stats
-        query_string = query_string + "period=1h&"
-        if query_params:
-            if "pulsar_geo" in query_params and query_params["pulsar_geo"] != "*":
-                query_string = query_string + "geo=" + query_params["pulsar_geo"] + "&"
-                if "pulsar_asn" in query_params and query_params["pulsar_asn"] != "*":
-                    query_string = query_string + "asn=" + query_params["pulsar_asn"] + "&"
+        query_string += "period=1h&"
+        if (
+            query_params
+            and "pulsar_geo" in query_params
+            and query_params["pulsar_geo"] != "*"
+        ):
+            query_string = query_string + "geo=" + query_params["pulsar_geo"] + "&"
+            if "pulsar_asn" in query_params and query_params["pulsar_asn"] != "*":
+                query_string = query_string + "asn=" + query_params["pulsar_asn"] + "&"
         query_string = query_string[:-1]
 
         tags = [""]

@@ -63,11 +63,7 @@ class UpscCheck(AgentCheck):
         for k, v in stats.items():
             if k in self.excluded:
                 continue
-            found_re = False
-            for r in self.excluded_re:
-                if r.match(k):
-                    found_re = True
-                    break
+            found_re = any(r.match(k) for r in self.excluded_re)
             if found_re:
                 continue
 
@@ -89,11 +85,7 @@ class UpscCheck(AgentCheck):
 
         for device in self.list_ups_devices():
             if device not in self.excluded_devices:
-                excluded = False
-                for r in self.excluded_devices_re:
-                    if r.match(device):
-                        excluded = True
-                        break
+                excluded = any(r.match(device) for r in self.excluded_devices_re)
                 if excluded:
                     continue
 

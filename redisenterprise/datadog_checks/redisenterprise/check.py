@@ -27,12 +27,11 @@ class RedisenterpriseCheck(AgentCheck):
 
     def _timestamp(self, date):
         """ Allows us to return an epoch time stamp if we use python2 or python3 """
-        if sys.version_info[0] < 3 or sys.version_info[1] < 4:
-            import time
-
-            return int(time.mktime(date.timetuple()))
-        else:
+        if sys.version_info[0] >= 3 and sys.version_info[1] >= 4:
             return int(date.timestamp())
+        import time
+
+        return int(time.mktime(date.timetuple()))
 
     def check(self, instance):
         host = self.instance.get('host')
@@ -90,8 +89,6 @@ class RedisenterpriseCheck(AgentCheck):
                 self.service_check('redisenterprise.running', self.CRITICAL, message=str(e), tags=service_check_tags)
                 raise CheckException(e)
 
-        pass
-
     def _check_not_follower(self, host, port, username, password, timeout, is_mock):
         """ The RedisEnterprise returns a 307 if a node is a cluster follower (not leader) """
         if is_mock:
@@ -106,9 +103,7 @@ class RedisenterpriseCheck(AgentCheck):
             verify=False,
         )
 
-        if r.status_code != 307:
-            return True
-        return False
+        return r.status_code != 307
 
     def _api_fetch_json(self, endpoint, service_check_tags, params=None):
         host = self.instance.get('host')
@@ -121,8 +116,7 @@ class RedisenterpriseCheck(AgentCheck):
             msg = "unexpected status of {0} when fetching stats, response: {1}"
             msg = msg.format(r.status_code, r.text)
             r.raise_for_status()
-        info = r.json()
-        return info
+        return r.json()
 
     def _get_fqdn(self, host, port, service_check_tags):
         """ Get the cluster FQDN back from the endpoints """
@@ -237,15 +231,13 @@ class RedisenterpriseCheck(AgentCheck):
         try:
             stats = self._api_fetch_json("bdbs/stats/last", service_check_tags)
         except Exception as e:
-            if e.response.status_code == 404:
-                self.gauge('redisenterprise.database_count', 0, tags=service_check_tags, hostname=host)
-                return 0
-            else:
+            if e.response.status_code != 404:
                 raise e
+            self.gauge('redisenterprise.database_count', 0, tags=service_check_tags, hostname=host)
+            return 0
         self.gauge('redisenterprise.database_count', len(stats), tags=service_check_tags, hostname=host)
         for i in stats:
-            tgs = []
-            tgs.append('database:{}'.format(bdb_dict[int(i)]['name']))
+            tgs = ['database:{}'.format(bdb_dict[int(i)]['name'])]
             # add the stats only available from the bdb_dict
             self.gauge(
                 'redisenterprise.endpoints', bdb_dict[int(i)]['endpoints'], tags=tgs + service_check_tags, hostname=host
@@ -288,15 +280,17 @@ class RedisenterpriseCheck(AgentCheck):
                     hostname=host,
                 )
             # derive flash object percentage being sure that the key exists and is not 0
-            if 'bigstore_objs_flash' in stats[i].keys():
-                if stats[i]['bigstore_objs_flash'] > 0:
-                    self.gauge(
-                        'redisenterprise.bigstore_objs_percent',
-                        100
-                        * stats[i]['bigstore_objs_ram']
-                        / (stats[i]['bigstore_objs_ram'] + stats[i]['bigstore_objs_flash']),
-                        tags=tgs + service_check_tags,
-                    )
+            if (
+                'bigstore_objs_flash' in stats[i].keys()
+                and stats[i]['bigstore_objs_flash'] > 0
+            ):
+                self.gauge(
+                    'redisenterprise.bigstore_objs_percent',
+                    100
+                    * stats[i]['bigstore_objs_ram']
+                    / (stats[i]['bigstore_objs_ram'] + stats[i]['bigstore_objs_flash']),
+                    tags=tgs + service_check_tags,
+                )
 
             for j in stats[i].keys():
                 if j in gauges:
@@ -325,9 +319,7 @@ class RedisenterpriseCheck(AgentCheck):
 
     def _shard_usage(self, bdb_dict, service_check_tags, host):
         """ Sum up the number of shards """
-        used = 0
-        for x in bdb_dict.values():
-            used += x['shards_used']
+        used = sum(x['shards_used'] for x in bdb_dict.values())
         self.gauge('redisenterprise.total_shards_used', used, tags=service_check_tags, hostname=host)
 
     def _get_nodes(self, host, port, service_check_tags):
@@ -342,5 +334,10 @@ class RedisenterpriseCheck(AgentCheck):
             if i['status'] == "active":
                 res['total_active_nodes'] += 1
 
-        for x in res.keys():
-            self.gauge('redisenterprise.{}'.format(x), res[x], tags=service_check_tags, hostname=host)
+        for x, value in res.items():
+            self.gauge(
+                'redisenterprise.{}'.format(x),
+                value,
+                tags=service_check_tags,
+                hostname=host,
+            )

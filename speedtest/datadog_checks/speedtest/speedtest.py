@@ -17,9 +17,7 @@ class SpeedtestCheck(AgentCheck):
         tags = self.instance.get("tags") or []
 
         # test config for only **one** of the following above options
-        c = 0
-        for opt in (host, ip, interface, server_id):
-            c += int(opt not in [None, ""])  # trick, int(bool) returns 0 if False, 1 if True
+        c = sum(int(opt not in [None, ""]) for opt in (host, ip, interface, server_id))
         if c > 1:
             raise ConfigurationError("Only one of `host`, `ip`, `interface` or `server_id` may be configured.")
 
@@ -59,8 +57,7 @@ class SpeedtestCheck(AgentCheck):
     def _call_command(self, cmd):
         # we keep this private so we can mock this in tests
         result = subprocess.check_output(cmd, shell=True)
-        payload = json.loads(result.strip())
-        return payload
+        return json.loads(result.strip())
 
     def _submit_data(self, payload, tags):
         """
