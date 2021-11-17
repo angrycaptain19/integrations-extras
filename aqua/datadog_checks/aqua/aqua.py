@@ -62,10 +62,11 @@ class AquaCheck(AgentCheck):
         """
         Validate that all required parameters are set in the instance.
         """
-        missing = []
-        for option in ('api_user', 'password', 'url'):
-            if option not in instance:
-                missing.append(option)
+        missing = [
+            option
+            for option in ('api_user', 'password', 'url')
+            if option not in instance
+        ]
 
         if missing:
             last = missing.pop()

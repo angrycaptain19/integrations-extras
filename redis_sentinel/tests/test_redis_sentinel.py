@@ -86,9 +86,7 @@ def test_down_slaves(aggregator, instance):
     """
     check = RedisSentinelCheck(CHECK_NAME, {}, {})
 
-    sentinel_slaves = []
-    for _ in range(5):
-        sentinel_slaves.append({'is_odown': True, 'is_sdown': False})
+    sentinel_slaves = [{'is_odown': True, 'is_sdown': False} for _ in range(5)]
     for _ in range(7):
         sentinel_slaves.append({'is_odown': False, 'is_sdown': True})
 

@@ -150,7 +150,7 @@ class EventStoreCheck(AgentCheck):
             es_paths = []
 
         if isinstance(json_obj, list):
-            json_obj = dict((str(k), v) for k, v in enumerate(json_obj))
+            json_obj = {str(k): v for k, v in enumerate(json_obj)}
 
         for key, value in json_obj.items():
             if isinstance(value, (dict, list)):
@@ -219,7 +219,7 @@ class EventStoreCheck(AgentCheck):
         split = metric_path.split('.')
         key = split[index]
         if isinstance(json_obj, list):
-            json_obj = dict((str(k), v) for k, v in enumerate(json_obj))
+            json_obj = {str(k): v for k, v in enumerate(json_obj)}
         try:
             v = json_obj[key]
             if isinstance(v, (dict, list)):
@@ -249,11 +249,8 @@ class EventStoreCheck(AgentCheck):
                 v = None
         elif data_type == 'datetime':
             dt = self.convert_to_timedelta(value)
-            if dt:
-                v = float(dt.total_seconds())
-            else:
-                v = float(0)
-            # Convert to MS
+            v = float(dt.total_seconds()) if dt else float(0)
+                # Convert to MS
         elif data_type == 'str':
             v = self.convert_str_to_gauge(value, metric)
         elif data_type == 'bool':
@@ -301,8 +298,14 @@ class EventStoreCheck(AgentCheck):
             mins = self._regex_number_to_int(tmp, 3)
             secs = self._regex_number_to_int(tmp, 4)
             subsecs = self._regex_number_to_int(tmp, 5)
-            td = datetime.timedelta(days=days, seconds=secs, microseconds=subsecs, minutes=mins, hours=hours)
-            return td
+            return datetime.timedelta(
+                days=days,
+                seconds=secs,
+                microseconds=subsecs,
+                minutes=mins,
+                hours=hours,
+            )
+
         except AttributeError:
             self.log.info('Unable to convert %s to timedelta', string)
         except TypeError:

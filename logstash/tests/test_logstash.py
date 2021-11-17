@@ -149,11 +149,11 @@ def test_check(aggregator):
             metric_tags = metric_tags + output_tag
         if metric_name in PIPELINE_FILTERS_METRICS:
             metric_tags = metric_tags + filter_tag
-        is_pipeline_queue_metric = metric_name in PIPELINE_QUEUE_METRICS
-
-        is_pipeline_metric = metric_name in pipeline_metrics
-
         if desc[0] == "gauge":
+            is_pipeline_queue_metric = metric_name in PIPELINE_QUEUE_METRICS
+
+            is_pipeline_metric = metric_name in pipeline_metrics
+
             if is_multi_pipeline and is_pipeline_metric:
                 aggregator.assert_metric(metric_name, count=1, tags=metric_tags + [u'pipeline_name:main'])
                 aggregator.assert_metric(metric_name, count=1, tags=metric_tags + [u'pipeline_name:second_pipeline'])

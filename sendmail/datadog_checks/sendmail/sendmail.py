@@ -16,7 +16,7 @@ class SendmailCheck(AgentCheck):
 
         valid_commands = ["mailq", "sendmail"]
 
-        if not any(cmd in sendmail_command for cmd in valid_commands):
+        if all(cmd not in sendmail_command for cmd in valid_commands):
             raise ConfigurationError("{} does not seem to be a valid command".format(sendmail_command))
 
         try:

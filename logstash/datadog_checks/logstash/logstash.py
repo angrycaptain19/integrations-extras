@@ -138,12 +138,11 @@ class LogstashCheck(AgentCheck):
         tags = ['url:%s' % url]
         tags.extend(custom_tags)
 
-        config = LogstashInstanceConfig(
+        return LogstashInstanceConfig(
             service_check_tags=service_check_tags,
             tags=tags,
             url=url,
         )
-        return config
 
     def _get_data(self, url, config, send_sc=True):
         """Hit a given URL and return the parsed json"""
@@ -273,13 +272,13 @@ class LogstashCheck(AgentCheck):
             else:
                 break
 
-        if value is not None:
-            if xtype == "gauge":
-                self.gauge(metric, value, tags=tags, hostname=hostname)
-            else:
-                self.rate(metric, value, tags=tags, hostname=hostname)
-        else:
+        if value is None:
             self._metric_not_found(metric, path)
+
+        elif xtype == "gauge":
+            self.gauge(metric, value, tags=tags, hostname=hostname)
+        else:
+            self.rate(metric, value, tags=tags, hostname=hostname)
 
     def _metric_not_found(self, metric, path):
         self.log.debug("Metric not found: %s -> %s", path, metric)

@@ -55,8 +55,7 @@ class RebootRequiredCheck(AgentCheck):
 
     def _get_created_at(self, fname):
         file_stat = stat(fname)
-        created_at = file_stat[ST_MTIME]
-        return created_at
+        return file_stat[ST_MTIME]
 
     def _touch(self, fname, times=None):
         with open(fname, 'a'):

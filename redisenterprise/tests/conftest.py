@@ -52,9 +52,8 @@ def dd_environment():
                 )
                 if j.status_code == 200:
                     break
-                else:
-                    print("Retrying:", counter)
-                    sleep(5)
+                print("Retrying:", counter)
+                sleep(5)
             except Exception as e:
                 print("Retrying:", counter, " Error:", str(e))
                 sleep(5)

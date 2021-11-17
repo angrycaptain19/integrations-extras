@@ -69,9 +69,7 @@ def get_rate_codes_dict_from_instance(service_codes, instance):
 def get_aws_service_codes(pricing_client):
     response = pricing_client.describe_services(FormatVersion='aws_v1')
 
-    service_codes = map(lambda service: service['ServiceCode'], response['Services'])
-
-    return service_codes
+    return map(lambda service: service['ServiceCode'], response['Services'])
 
 
 def get_aws_prices(pricing_client, service_code, rate_code):
@@ -97,9 +95,7 @@ def find_price_dimensions_by_rate_code(rate_code, terms):
     term_code = '.'.join(rate_code_parts[:2])
 
     term = next(filter(lambda term: term_code in term, terms))
-    price_dimensions = term[term_code]['priceDimensions'][rate_code]
-
-    return price_dimensions
+    return term[term_code]['priceDimensions'][rate_code]
 
 
 def get_tags_from_price_dimensions(price_dimensions):

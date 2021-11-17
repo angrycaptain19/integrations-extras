@@ -74,8 +74,7 @@ class Ns1Check(AgentCheck):
             for job in v[1]:
                 jobid = job["jobid"]
                 if jobid == pulsar_job_id:
-                    jobname = job["name"]
-                    return jobname
+                    return job["name"]
         return ""
 
     def create_url(self, metrics, query_params, networks):
@@ -94,10 +93,7 @@ class Ns1Check(AgentCheck):
                 checkUrl.update(self.ns1.get_zone_info_url(key, val))
                 checkUrl.update(self.ns1.get_plan_details_url(key, val))
             elif key == "ddi":
-                if val:
-                    scopegroups = self.get_ddi_scope_groups()
-                else:
-                    scopegroups = None
+                scopegroups = self.get_ddi_scope_groups() if val else None
                 checkUrl.update(self.ns1.get_ddi_url(key, val, scopegroups))
             elif key == "pulsar":
                 checkUrl.update(self.ns1.get_pulsar_url(query_params))
@@ -146,7 +142,7 @@ class Ns1Check(AgentCheck):
             rtype = r["type"]
             if rtype != "NS":
                 recmap[domain] = rtype
-        if recmap and len(recmap) > 0:
+        if recmap:
             result.append(recmap)
         return result
 
@@ -178,7 +174,7 @@ class Ns1Check(AgentCheck):
                 res, status = self.extract_pulsar_response_time(result)
             elif "pulsar.availability" in key:
                 res, status = self.extract_pulsar_availability(result)
-            elif "pulsar.decisions" == key:
+            elif key == "pulsar.decisions":
                 res, status = self.extract_pulsar_count_by_job(key, result)
             elif "pulsar" in key:
                 res, status = self.extract_pulsar_count(key, result)
@@ -213,8 +209,6 @@ class Ns1Check(AgentCheck):
 
             for element in graphs:
                 graph = element["graph"]
-                jobtags = element["tags"]
-                jobid = jobtags["jobid"]
                 # sort graph array
                 # find last timestamp that is >= last time stamp saved in file
                 res = sorted(graph, key=lambda x: x[0], reverse=True)
@@ -223,6 +217,8 @@ class Ns1Check(AgentCheck):
                     curr_timestamp = res[0][0]
                     curr_count = res[0][1]
 
+                    jobtags = element["tags"]
+                    jobid = jobtags["jobid"]
                     # find this metric in usage count
                     jobkey = key + "." + jobid
                     if jobkey in self.usage_count:
@@ -371,18 +367,18 @@ class Ns1Check(AgentCheck):
 
     def extract_records_ttl(self, jsonResult):
         try:
-            zoneTtl = {}
-            for zone in jsonResult["records"]:
-                zoneTtl[zone["domain"]] = zone["ttl"]
+            zoneTtl = {zone["domain"]: zone["ttl"] for zone in jsonResult["records"]}
             return zoneTtl, True
         except Exception:
             return None, False
 
     def extract_billing(self, jsonResult):
         try:
-            billing = {}
-            billing["usage"] = jsonResult["totals"]["queries"]
-            billing["limit"] = jsonResult["any"]["query_credit"]
+            billing = {
+                'usage': jsonResult["totals"]["queries"],
+                'limit': jsonResult["any"]["query_credit"],
+            }
+
             return billing, True
         except Exception:
             return None, False
@@ -393,9 +389,7 @@ class Ns1Check(AgentCheck):
         try:
             response = self.http.get(url, extra_headers=self.headers, timeout=60)
             response.raise_for_status()
-            response_json = response.json()
-
-            return response_json
+            return response.json()
 
         except Timeout as e:
             self.service_check(
@@ -452,9 +446,7 @@ class Ns1Check(AgentCheck):
                     self.gauge('ns1.{name}'.format(name=metric_name), v, tags)
                 elif metric_type == "count":
                     self.count('ns1.{name}.{record}'.format(name=metric_name, record=k), v, tags)
-        else:
-            # scalar value, just submit
-            if metric_type == "gauge":
-                self.gauge('ns1.{}'.format(metric_name), metric_value, tags)
-            elif metric_type == "count":
-                self.count('ns1.{}'.format(metric_name), metric_value, tags)
+        elif metric_type == "gauge":
+            self.gauge('ns1.{}'.format(metric_name), metric_value, tags)
+        elif metric_type == "count":
+            self.count('ns1.{}'.format(metric_name), metric_value, tags)

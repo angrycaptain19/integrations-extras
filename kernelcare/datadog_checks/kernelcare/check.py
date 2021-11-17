@@ -17,11 +17,7 @@ class KernelcareCheck(AgentCheck):
 
         lines = text.split('\n')
         tmp = lines[0].split('|', 1)
-        if len(tmp) == 1:
-            params = tmp[0]
-        else:
-            params = tmp[1]
-
+        params = tmp[0] if len(tmp) == 1 else tmp[1]
         res = {}
         for p in params.split(';'):
             k, v = p.split('=', 1)

@@ -47,20 +47,18 @@ def _g(stat_map, default, func, *components):
                 value = value[component]
             else:
                 return default
+        elif component not in value:
+            return default
         else:
-            if component not in value:
-                return default
-            else:
-                value = value[component]
-    if value not in (None, ''):
-        if func is not None:
-            try:
-                return func(value)
-            except Exception:
-                return default
-        return value
-    else:
+            value = value[component]
+    if value in (None, ''):
         return default
+    if func is not None:
+        try:
+            return func(value)
+        except Exception:
+            return default
+    return value
 
 
 def _float(v):
@@ -240,9 +238,8 @@ class StormCheck(AgentCheck):
                 # convert first
                 other = StormCheck.StormVersion.from_string(other)
 
-            if not self.major < other.major:
-                if not self.minor < other.minor:
-                    return self.patch < other.patch
+            if not self.major < other.major and not self.minor < other.minor:
+                return self.patch < other.patch
             return True
 
     def get_request_json(self, url_part, error_message, params=None):
@@ -352,50 +349,50 @@ class StormCheck(AgentCheck):
         :return: Version info
         :rtype: StormCheck.StormVersion
         """
-        if len(cluster_stats) >= 0:
-            version = (
-                _get_string(cluster_stats, _get_string(cluster_stats, 'unknown', 'stormVersion'), 'version')
-                .replace(' ', '_')
-                .lower()
-            )
-            storm_version = 'stormVersion:{}'.format(version)
-            tags = [storm_version]
-            if storm_version not in self.additional_tags:
-                self.additional_tags.append(storm_version)
+        if len(cluster_stats) < 0:
+            return StormCheck.StormVersion(0, 0, 0)
+        version = (
+            _get_string(cluster_stats, _get_string(cluster_stats, 'unknown', 'stormVersion'), 'version')
+            .replace(' ', '_')
+            .lower()
+        )
+        storm_version = 'stormVersion:{}'.format(version)
+        tags = [storm_version]
+        if storm_version not in self.additional_tags:
+            self.additional_tags.append(storm_version)
 
-            # Longs
-            for metric_name in [
-                'executorsTotal',
-                'slotsFree',
-                'slotsTotal',
-                'slotsUsed',
-                'supervisors',
-                'tasksTotal',
-                'topologies',
-            ]:
-                self.report_gauge(
-                    'storm.cluster.{}'.format(metric_name),
-                    _get_long(cluster_stats, 0, metric_name),
-                    tags=tags,
-                    additional_tags=self.additional_tags,
-                )
-            # Floats
-            for metric_name in [
-                'availCpu',
-                'availMem',
-                'cpuAssignedPercentUtil',
-                'memAssignedPercentUtil',
-                'totalCpu',
-                'totalMem',
-            ]:
-                self.report_gauge(
-                    'storm.cluster.{}'.format(metric_name),
-                    _get_float(cluster_stats, 0.0, metric_name),
-                    tags=tags,
-                    additional_tags=self.additional_tags,
-                )
-            return StormCheck.StormVersion.from_string(version)
-        return StormCheck.StormVersion(0, 0, 0)
+        # Longs
+        for metric_name in [
+            'executorsTotal',
+            'slotsFree',
+            'slotsTotal',
+            'slotsUsed',
+            'supervisors',
+            'tasksTotal',
+            'topologies',
+        ]:
+            self.report_gauge(
+                'storm.cluster.{}'.format(metric_name),
+                _get_long(cluster_stats, 0, metric_name),
+                tags=tags,
+                additional_tags=self.additional_tags,
+            )
+        # Floats
+        for metric_name in [
+            'availCpu',
+            'availMem',
+            'cpuAssignedPercentUtil',
+            'memAssignedPercentUtil',
+            'totalCpu',
+            'totalMem',
+        ]:
+            self.report_gauge(
+                'storm.cluster.{}'.format(metric_name),
+                _get_float(cluster_stats, 0.0, metric_name),
+                tags=tags,
+                additional_tags=self.additional_tags,
+            )
+        return StormCheck.StormVersion.from_string(version)
 
     def process_nimbus_stats(self, nimbus_stats):
         """Process Nimbus Stats Response
@@ -759,41 +756,42 @@ class StormCheck(AgentCheck):
         :param interval: Interval in seconds for reported metrics
         :type interval: int
         """
-        if topology_stats:
-            name = topology_name.replace('.', '_').replace(':', '_')
-            tags = ['topology:{}'.format(name)]
-            for k in ('bolts', 'spouts'):
-                for s in _get_list(topology_stats, k):
-                    k_name = _get_string(s, 'unknown', 'id').replace('.', '_').replace(':', '_')
-                    k_tags = tags + ['{}:{}'.format(k, k_name)]
-                    for sc in [
-                        'acked',
-                        'complete_ms_avg',
-                        'emitted',
-                        'executed',
-                        'executed_ms_avg',
-                        'failed',
-                        'process_ms_avg',
-                        'transferred',
-                    ]:
-                        for ks in _get_list(s, sc):
-                            stream_id = _get_string(ks, 'unknown', 'stream_id')
-                            ks_tags = k_tags + ['stream:{}'.format(stream_id)]
-                            component_id = ks.get('component_id')
-                            if component_id:
-                                ks_tags.append('component:{}'.format(component_id))
+        if not topology_stats:
+            return
+        name = topology_name.replace('.', '_').replace(':', '_')
+        tags = ['topology:{}'.format(name)]
+        for k in ('bolts', 'spouts'):
+            for s in _get_list(topology_stats, k):
+                k_name = _get_string(s, 'unknown', 'id').replace('.', '_').replace(':', '_')
+                k_tags = tags + ['{}:{}'.format(k, k_name)]
+                for sc in [
+                    'acked',
+                    'complete_ms_avg',
+                    'emitted',
+                    'executed',
+                    'executed_ms_avg',
+                    'failed',
+                    'process_ms_avg',
+                    'transferred',
+                ]:
+                    for ks in _get_list(s, sc):
+                        stream_id = _get_string(ks, 'unknown', 'stream_id')
+                        ks_tags = k_tags + ['stream:{}'.format(stream_id)]
+                        component_id = ks.get('component_id')
+                        if component_id:
+                            ks_tags.append('component:{}'.format(component_id))
 
-                            component_value = _get_float(ks, 0.0, 'value')
-                            if component_value is not None:
-                                # will make stats like these two examples
-                                # storm.topologyStats.metrics.spouts.last_60.emitted
-                                # storm.topologyStatus.metrics.bolts.last_60.acked
-                                self.report_histogram(
-                                    'storm.topologyStats.metrics.{}.last_{}.{}'.format(k, interval, sc),
-                                    component_value,
-                                    tags=ks_tags,
-                                    additional_tags=self.additional_tags,
-                                )
+                        component_value = _get_float(ks, 0.0, 'value')
+                        if component_value is not None:
+                            # will make stats like these two examples
+                            # storm.topologyStats.metrics.spouts.last_60.emitted
+                            # storm.topologyStatus.metrics.bolts.last_60.acked
+                            self.report_histogram(
+                                'storm.topologyStats.metrics.{}.last_{}.{}'.format(k, interval, sc),
+                                component_value,
+                                tags=ks_tags,
+                                additional_tags=self.additional_tags,
+                            )
 
     def report_gauge(self, metric, value, tags, additional_tags):
         """Report the Gauge Metric.
